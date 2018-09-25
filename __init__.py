@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import csv, heapq, logging, os, sys, tempfile
+from pydoc import locate
 from optparse import OptionParser
 csv.field_size_limit(sys.maxsize)
 
@@ -11,6 +12,7 @@ class CsvSortError(Exception):
 
 def csvsort(input_filename,
             columns,
+            column_types=None,
             output_filename=None,
             max_size=100,
             has_header=True,
@@ -25,6 +27,7 @@ def csvsort(input_filename,
         input_filename: the CSV filename to sort.
         columns: a list of columns to sort on (can be 0 based indices or header
             keys).
+        column_types: a list of column types eg("str", "int")
         output_filename: optional filename for sorted file. If not given then
             input file will be overriden.
         max_size: the maximum size (in MB) of CSV file to load in memory at
@@ -46,13 +49,16 @@ def csvsort(input_filename,
             header = None
 
         columns = parse_columns(columns, header)
+        if column_types is None:
+        column_types =  [locate("str") for column in columns]
+        column_types = parse_column_types(column_types)
 
         filenames = csvsplit(reader, max_size)
         if show_progress:
-            logging.info('Merging %d splits' % len(filenames))
+            logger.info('Merging %d splits' % len(filenames))
         for filename in filenames:
-            memorysort(filename, columns)
-        sorted_filename = mergesort(filenames, columns)
+            memorysort(filename, columns, column_types)
+        sorted_filename = mergesort(filenames, columns, column_types)
 
     # XXX make more efficient by passing quoting, delimiter, and moving result
     # generate the final output file
@@ -66,6 +72,11 @@ def csvsort(input_filename,
 
     os.remove(sorted_filename)
 
+
+def parse_column_types(column_types):
+    for i, column_type in enumerate(column_types):
+        column_types[i] = locate(column_type)
+    return column_types
 
 def parse_columns(columns, header):
     """check the provided column headers
@@ -114,30 +125,30 @@ def csvsplit(reader, max_size):
     return split_filenames
 
 
-def memorysort(filename, columns):
+def memorysort(filename, columns, column_types):
     """Sort this CSV file in memory on the given columns
     """
     with open(filename) as input_fp:
         rows = [row for row in csv.reader(input_fp)]
-    rows.sort(key=lambda row: get_key(row, columns))
+    rows.sort(key=lambda row: get_key(row, columns, column_types))
     with open(filename, 'w') as output_fp:
         writer = csv.writer(output_fp)
         for row in rows:
             writer.writerow(row)
 
 
-def get_key(row, columns):
+def get_key(row, columns, column_types):
     """Get sort key for this row
     """
-    return [row[column] for column in columns]
+    return [column_types[i](row[column]) for i, column in enumerate(columns)]
 
 
-def decorated_csv(filename, columns):
+def decorated_csv(filename, columns, column_types):
     """Iterator to sort CSV rows
     """
     with open(filename) as fp:
         for row in csv.reader(fp):
-            yield get_key(row, columns), row
+            yield get_key(row, columns, column_types), row
 
 
 def mergesort(sorted_filenames, columns, nway=2):
