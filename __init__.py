@@ -50,8 +50,9 @@ def csvsort(input_filename,
 
         columns = parse_columns(columns, header)
         if column_types is None:
-        column_types =  [locate("str") for column in columns]
-        column_types = parse_column_types(column_types)
+            column_types =  [locate("str") for column in columns]
+        else:
+            column_types = parse_column_types(column_types)
 
         filenames = csvsplit(reader, max_size)
         if show_progress:
@@ -151,7 +152,7 @@ def decorated_csv(filename, columns, column_types):
             yield get_key(row, columns, column_types), row
 
 
-def mergesort(sorted_filenames, columns, nway=2):
+def mergesort(sorted_filenames, columns, column_types, nway=2):
     """Merge these 2 sorted csv files into a single output file
     """
     merge_n = 0
@@ -162,7 +163,7 @@ def mergesort(sorted_filenames, columns, nway=2):
         with tempfile.NamedTemporaryFile(delete=False, mode='w') as output_fp:
             writer = csv.writer(output_fp)
             merge_n += 1
-            for _, row in heapq.merge(*[decorated_csv(filename, columns)
+            for _, row in heapq.merge(*[decorated_csv(filename, columns, column_types)
                                         for filename in merge_filenames]):
                 writer.writerow(row)
 

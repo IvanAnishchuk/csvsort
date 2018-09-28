@@ -5,14 +5,14 @@ def read(filename):
     return open(os.path.join(os.path.dirname(__file__), filename)).read()
 
 setup(
-    name='csvsort', 
-    version='1.5',
+    name='typedcsvsort', 
+    version='1.8',
     packages=['csvsort'],
     package_dir={'csvsort' : '.'}, 
-    author='Richard Penman',
-    author_email='richard@webscraping.com',
+    author='Jayme McKiney',
+    author_email='jayme.mckiney@gmail.com',
     description='Sort large CSV files on disk rather than in memory',
     long_description=read('README.rst'),
-    url='https://bitbucket.org/richardpenman/csvsort',
+    url='https://jmckiney@bitbucket.org/jmckiney/csvsort',
     license='lgpl',
 )
